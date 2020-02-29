@@ -7,7 +7,7 @@
 
 #include "progress.hh"
 
-typedef double REAL;
+typedef float REAL;
 
 
 static inline void read_chunk(const char *filename, int pass, cpumat<REAL> &x)
@@ -17,17 +17,18 @@ static inline void read_chunk(const char *filename, int pass, cpumat<REAL> &x)
   io::read_cpu_chunk(filename, row_first, row_last, x);
 }
 
-static inline void process_chunk(cpumat<REAL> &chunk, cpumat<REAL> &tmp, cpumat<REAL> &cp)
+static inline void process_chunk(const cpumat<REAL> &chunk, cpumat<REAL> &cp_chunk, cpumat<REAL> &cp)
 {
-  linalg::crossprod((REAL) 1, chunk, tmp);
-  linalg::add(false, false, (REAL) 1, (REAL) 1, tmp, cp, cp);
+  linalg::crossprod((REAL) 1, chunk, cp_chunk);
+  linalg::add(false, false, (REAL) 1, (REAL) 1, cp_chunk, cp, cp);
 }
 
 cpumat<REAL> crossprod_chunk(const char* filename, const uint64_t nrows, const len_t ncols, const len_t chunklen, const bool show_progress=true)
 {
   cpumat<REAL> chunk(chunklen, ncols);
+  cpumat<REAL> cp_chunk(ncols, ncols);
   cpumat<REAL> cp(ncols, ncols);
-  cpumat<REAL> tmp(ncols, ncols);
+  cp.fill_zero();
   
   const int passes = (int) nrows / chunklen;
   progress bar(passes);
@@ -37,16 +38,18 @@ cpumat<REAL> crossprod_chunk(const char* filename, const uint64_t nrows, const l
   
   for (int pass=1; pass<passes; pass++)
   {
-    std::thread process_task(process_chunk, std::ref(chunk), std::ref(tmp), std::ref(cp));
-    std::thread read_task(read_chunk, filename, pass, std::ref(chunk));
-    
-    process_task.join();
-    read_task.join();
+    process_chunk(chunk, cp_chunk, cp);
+    read_chunk(filename, 0, chunk);
+    // std::thread process_task(process_chunk, std::ref(chunk), std::ref(cp_chunk), std::ref(cp));
+    // std::thread read_task(read_chunk, filename, pass, std::ref(chunk));
+    // 
+    // process_task.join();
+    // read_task.join();
     
     bar.print(show_progress);
   }
   
-  process_chunk(chunk, tmp, cp);
+  process_chunk(chunk, cp_chunk, cp);
   return cp;
 }
 
@@ -60,10 +63,12 @@ int main()
   
   const char *filename = "/tmp/x.mat";
   
-  // cpumat<REAL> x(nrows, ncols);
-  // x.fill_linspace(1, 2);
-  // io::write_cpu(filename, x);
+  printf("# Generating file %s\n", filename);
+  cpumat<REAL> x(nrows, ncols);
+  x.fill_linspace(1, 2);
+  io::write_cpu(filename, x);
   
+  printf("\n# Computing SVD\n");
   auto cp = crossprod_chunk(filename, nrows, ncols, chunklen);
   cp.info();
   cp.print();
@@ -75,6 +80,7 @@ int main()
   s.info();
   s.print();
   vt.info();
+  vt.print();
   
   return 0;
 }
