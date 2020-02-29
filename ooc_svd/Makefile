@@ -1,9 +1,9 @@
 -include ../make.inc
 
-all: ooc_svd
+all: cpu
 
-ooc_svd:
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(WARNFLAGS) $(OMPFLAGS) ooc_svd.cpp -o ooc_svd $(CPU_LDFLAGS)
+cpu: ooc_svd.cpp
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(WARNFLAGS) $(OMPFLAGS) ooc_svd.cpp -o cpu $(CPU_LDFLAGS)
 
 clean:
-	rm -rf ooc_svd
+	rm -rf cpu
