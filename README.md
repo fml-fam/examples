@@ -7,3 +7,5 @@
 
 
 Some substantial examples using fml. These kernels are fairly specialized, and may not reasonably generalize to all matrix types. As such they are unlikely to make it into fml core.
+
+* [Out of Core SVD](ooc_svd/README.md)
